@@ -1,14 +1,36 @@
 package main
 
-import "fmt"
+import (
+	"net/http"
+	"io"
+	"os"
+	"os/signal"
+	"syscall"
+	"fmt"
+)
+
+func hello(w http.ResponseWriter, r *http.Request) {
+	io.WriteString(w, "Hello world!")
+}
+
+func hello2(w http.ResponseWriter, r *http.Request) {
+	io.WriteString(w, "What's up?")
+}
 
 func main() {
-	raw := make(map[string]interface{})
-	raw["x"] = 1
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", hello)
 
-	html, ok := raw["x"].(string)
-	if !ok {
-			fmt.Printf("unexpected type for html template")
-	}
-	fmt.Printf("%s", html)
+	mux2 := http.NewServeMux()
+	mux2.HandleFunc("/", hello2)
+
+	go http.ListenAndServe(":8000", mux)
+	go http.ListenAndServe(":8001", mux2)
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	fmt.Println("awaiting signal")
+	<-sigs
+	fmt.Println("exiting")
 }
